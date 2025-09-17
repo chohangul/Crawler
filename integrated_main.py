@@ -26,17 +26,70 @@ from tkinter import filedialog, messagebox, ttk
 # ---------------------------------------------------------------------------
 # 경로 및 기본 설정
 # ---------------------------------------------------------------------------
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
-CONFIG_FILE = DATA_DIR / "config.json"
-MEMBER_DATA_FILE = DATA_DIR / "members.xlsx"
-DEFAULT_RESULTS_DIR = BASE_DIR / "results"
-RESULTS_DIR = DEFAULT_RESULTS_DIR
-LOG_DIR = BASE_DIR / "logs"
+APP_NAME = "NewsCollector"
 
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-DEFAULT_RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+
+def _resolve_app_root() -> Path:
+    """Return location for bundled assets."""
+
+    if getattr(sys, "frozen", False):  # PyInstaller 실행 파일
+        return Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return Path(__file__).resolve().parent
+
+
+def _platform_storage_dir() -> Path:
+    """플랫폼에 맞는 사용자 데이터 디렉터리 반환."""
+
+    if sys.platform.startswith("win"):
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            return Path(appdata) / APP_NAME
+        return Path.home() / "AppData" / "Roaming" / APP_NAME
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support" / APP_NAME
+    data_home = os.environ.get("XDG_DATA_HOME")
+    if data_home:
+        return Path(data_home) / APP_NAME
+    return Path.home() / ".local" / "share" / APP_NAME
+
+
+def _can_write(path: Path) -> bool:
+    """지정한 경로에 쓰기가 가능한지 테스트."""
+
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        test_file = path / ".write_test"
+        with open(test_file, "w", encoding="utf-8") as temp:
+            temp.write("test")
+        test_file.unlink()
+        return True
+    except OSError:
+        return False
+
+
+def _resolve_storage_root() -> Path:
+    """실행 환경에 따라 데이터 저장소 경로 결정."""
+
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        if _can_write(exe_dir):
+            return exe_dir
+        return _platform_storage_dir()
+    return Path(__file__).resolve().parent
+
+
+APP_ROOT = _resolve_app_root()
+STORAGE_ROOT = _resolve_storage_root()
+DATA_DIR = STORAGE_ROOT / "data"
+CONFIG_FILE = STORAGE_ROOT / "config.json"
+MEMBER_DATA_FILE = DATA_DIR / "members.xlsx"
+DEFAULT_RESULTS_DIR = STORAGE_ROOT / "results"
+RESULTS_DIR = DEFAULT_RESULTS_DIR
+LOG_DIR = STORAGE_ROOT / "logs"
+RESOURCE_DIR = APP_ROOT / "resources"
+
+for directory in (STORAGE_ROOT, DATA_DIR, LOG_DIR, DEFAULT_RESULTS_DIR):
+    directory.mkdir(parents=True, exist_ok=True)
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
@@ -811,9 +864,14 @@ class MainWindow(ctk.CTk):
 
     def _setup_window(self) -> None:
         try:
-            icon_path = BASE_DIR / "app.ico"
-            if icon_path.exists() and os.name == "nt":
-                self.iconbitmap(icon_path)
+            icon_candidates = [
+                RESOURCE_DIR / "app.ico",
+                APP_ROOT / "app.ico",
+            ]
+            for icon_path in icon_candidates:
+                if icon_path.exists() and os.name == "nt":
+                    self.iconbitmap(icon_path)
+                    break
         except Exception:  # pragma: no cover - OS 의존
             pass
 
