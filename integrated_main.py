@@ -11,16 +11,21 @@ import logging
 import os
 import queue
 import random
+import re
 import threading
 import time
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+from urllib.parse import urljoin
 
 import customtkinter as ctk
 import pandas as pd
+import requests
 import tkinter as tk
+from bs4 import BeautifulSoup
 from tkinter import filedialog, messagebox, ttk
 
 # ---------------------------------------------------------------------------
@@ -91,6 +96,278 @@ RESOURCE_DIR = APP_ROOT / "resources"
 for directory in (STORAGE_ROOT, DATA_DIR, LOG_DIR, DEFAULT_RESULTS_DIR):
     directory.mkdir(parents=True, exist_ok=True)
 
+
+DEFAULT_REQUEST_HEADERS: Dict[str, str] = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+}
+
+GOOGLE_NEWS_RSS_URL = "https://news.google.com/rss/search"
+NAVER_NEWS_SEARCH_URL = "https://search.naver.com/search.naver"
+PLATFORM_LABELS = {
+    "google": "Google 뉴스",
+    "naver": "네이버 뉴스",
+}
+
+COMPANY_COLUMN = "회원사명"
+KEYWORD_COLUMN = "검색키워드"
+ACTIVE_COLUMN = "활성화"
+CATEGORY_COLUMN = "카테고리"
+WEBSITE_COLUMN = "홈페이지"
+
+MEMBER_COLUMNS = [
+    COMPANY_COLUMN,
+    KEYWORD_COLUMN,
+    ACTIVE_COLUMN,
+    CATEGORY_COLUMN,
+    WEBSITE_COLUMN,
+]
+
+RESULT_COLUMNS = [
+    COMPANY_COLUMN,
+    "기사제목",
+    "URL",
+    "출처",
+    "발행일시",
+    "수집일시",
+    "플랫폼",
+]
+
+
+def _format_timestamp(value: Optional[datetime]) -> str:
+    if not value:
+        return ""
+    return value.strftime("%Y-%m-%d %H:%M")
+
+
+def _clean_press_name(name: str, fallback: str) -> str:
+    cleaned = (name or "").replace("언론사 선정", "").strip()
+    return cleaned or fallback
+
+
+def _create_http_session() -> requests.Session:
+    session = requests.Session()
+    session.headers.update(DEFAULT_REQUEST_HEADERS)
+    return session
+
+
+def _parse_naver_datetime(label: str) -> Optional[datetime]:
+    if not label:
+        return None
+    text = label.strip()
+    if not text:
+        return None
+
+    now = datetime.now()
+    try:
+        if text.endswith("전"):
+            match = re.search(r"(\d+)", text)
+            if not match:
+                return now
+            value = int(match.group(1))
+            if "분" in text:
+                return now - timedelta(minutes=value)
+            if "시간" in text:
+                return now - timedelta(hours=value)
+            if "일" in text:
+                return now - timedelta(days=value)
+            if "주" in text:
+                return now - timedelta(weeks=value)
+            if "개월" in text:
+                return now - timedelta(days=value * 30)
+            return now
+
+        if text.startswith("어제"):
+            base = now - timedelta(days=1)
+            time_match = re.search(r"(\d{1,2}:\d{2})", text)
+            if time_match:
+                hour, minute = map(int, time_match.group(1).split(":"))
+                if "오후" in text and hour < 12:
+                    hour += 12
+                if "오전" in text and hour == 12:
+                    hour = 0
+                return base.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            return base
+
+        if text.startswith("오늘"):
+            time_match = re.search(r"(\d{1,2}:\d{2})", text)
+            if time_match:
+                hour, minute = map(int, time_match.group(1).split(":"))
+                if "오후" in text and hour < 12:
+                    hour += 12
+                if "오전" in text and hour == 12:
+                    hour = 0
+                return now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            return now
+
+        normalized = re.sub(r"\s+", " ", text)
+        normalized = normalized.replace(". ", ".").strip(" .")
+        normalized = normalized.replace("오전", "AM").replace("오후", "PM")
+        normalized = normalized.replace(".", "-")
+        for fmt in ("%Y-%m-%d %p %H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+            try:
+                return datetime.strptime(normalized, fmt)
+            except ValueError:
+                continue
+    except Exception:
+        return None
+    return None
+
+
+def _fetch_google_news(session: requests.Session, keyword: str, limit: int, timeout: int) -> List[Dict[str, str]]:
+    if limit <= 0:
+        return []
+
+    params = {"q": keyword, "hl": "ko", "gl": "KR", "ceid": "KR:ko"}
+    try:
+        response = session.get(GOOGLE_NEWS_RSS_URL, params=params, timeout=timeout)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError(f"Google 뉴스 요청 실패: {exc}") from exc
+
+    soup = BeautifulSoup(response.text, "xml")
+    articles: List[Dict[str, str]] = []
+    for item in soup.find_all("item"):
+        title_tag = item.find("title")
+        link_tag = item.find("link")
+        if not title_tag or not link_tag:
+            continue
+
+        raw_link = link_tag.get_text(strip=True)
+        link = urljoin("https://news.google.com/", raw_link)
+        title = title_tag.get_text(strip=True)
+        source_tag = item.find("source")
+        source = _clean_press_name(source_tag.get_text(strip=True) if source_tag else "", PLATFORM_LABELS["google"])
+
+        pub_date_tag = item.find("pubDate")
+        published_at: Optional[datetime] = None
+        if pub_date_tag and pub_date_tag.string:
+            try:
+                parsed = parsedate_to_datetime(pub_date_tag.string)
+                if parsed.tzinfo is not None:
+                    published_at = parsed.astimezone()
+                else:
+                    published_at = parsed
+            except (TypeError, ValueError, OverflowError):
+                published_at = None
+
+        articles.append(
+            {
+                "title": title,
+                "url": link,
+                "source": source,
+                "published_at": _format_timestamp(published_at),
+                "platform": PLATFORM_LABELS["google"],
+            }
+        )
+        if len(articles) >= limit:
+            break
+    return articles
+
+
+def _fetch_naver_news(session: requests.Session, keyword: str, limit: int, timeout: int) -> List[Dict[str, str]]:
+    if limit <= 0:
+        return []
+
+    params = {"where": "news", "sm": "tab_hty.top", "query": keyword}
+    try:
+        response = session.get(NAVER_NEWS_SEARCH_URL, params=params, timeout=timeout)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        raise RuntimeError(f"네이버 뉴스 요청 실패: {exc}") from exc
+
+    soup = BeautifulSoup(response.text, "lxml")
+    articles: List[Dict[str, str]] = []
+    for area in soup.select("div.news_area"):
+        link_tag = area.select_one("a.news_tit")
+        if not link_tag:
+            continue
+
+        title = link_tag.get_text(strip=True)
+        url = link_tag.get("href", "").strip()
+        if not url:
+            continue
+
+        press_tag = area.select_one("a.info.press")
+        press = _clean_press_name(press_tag.get_text(strip=True) if press_tag else "", PLATFORM_LABELS["naver"])
+
+        date_label = ""
+        for info in area.select("span.info"):
+            text = info.get_text(strip=True)
+            if not text:
+                continue
+            if "언론사" in text:
+                continue
+            if text.endswith("전") or text.startswith("오늘") or text.startswith("어제") or re.search(r"\d", text):
+                date_label = text
+                break
+
+        articles.append(
+            {
+                "title": title,
+                "url": url,
+                "source": press,
+                "published_at": _format_timestamp(_parse_naver_datetime(date_label)),
+                "platform": PLATFORM_LABELS["naver"],
+            }
+        )
+        if len(articles) >= limit:
+            break
+    return articles
+
+
+def _collect_member_articles(
+    session: requests.Session,
+    company: str,
+    keyword: str,
+    platforms: List[str],
+    max_articles: int,
+    timeout: int,
+) -> List[Dict[str, str]]:
+    collected: List[Dict[str, str]] = []
+    seen_urls: set[str] = set()
+    collected_at = _format_timestamp(datetime.now())
+
+    for platform in platforms:
+        remaining = max_articles - len(collected)
+        if remaining <= 0:
+            break
+
+        platform_key = platform.lower()
+        try:
+            if platform_key == "google":
+                articles = _fetch_google_news(session, keyword, remaining, timeout)
+            elif platform_key == "naver":
+                articles = _fetch_naver_news(session, keyword, remaining, timeout)
+            else:
+                logger.warning("지원하지 않는 플랫폼이 설정되었습니다: %s", platform)
+                continue
+        except RuntimeError as exc:
+            logger.warning("%s (%s) 플랫폼 오류: %s", company, platform, exc)
+            continue
+
+        for article in articles:
+            url = article.get("url")
+            if not url or url in seen_urls:
+                continue
+            seen_urls.add(url)
+
+            collected.append(
+                {
+                    COMPANY_COLUMN: company,
+                    "기사제목": article.get("title", ""),
+                    "URL": url,
+                    "출처": article.get("source", ""),
+                    "발행일시": article.get("published_at", ""),
+                    "수집일시": collected_at,
+                    "플랫폼": article.get("platform", platform),
+                }
+            )
+            if len(collected) >= max_articles:
+                break
+
+    return collected
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("blue")
 
@@ -1213,10 +1490,23 @@ class MainWindow(ctk.CTk):
             self.log_message("사용자가 수집을 중지했습니다.", "WARNING")
 
     def _run_crawler(self, members: List[Dict[str, str]]) -> None:
+        session = _create_http_session()
         try:
             interval = int(self.config_manager.get("crawl_interval", 2))
             max_articles = int(self.config_manager.get("max_articles_per_company", 20))
-            platforms = self.config_manager.get("platforms", ["google", "naver"])
+            timeout = int(self.config_manager.get("timeout", 30))
+            raw_platforms = self.config_manager.get("platforms", ["google", "naver"])
+            if isinstance(raw_platforms, list):
+                platforms = [str(p) for p in raw_platforms if isinstance(p, str)]
+            elif raw_platforms:
+                platforms = [str(raw_platforms)]
+            else:
+                platforms = ["google", "naver"]
+
+            platforms = [p for p in platforms if p]
+            if not platforms:
+                platforms = ["google", "naver"]
+            platforms = list(dict.fromkeys(platforms))
 
             collected_rows: List[Dict[str, str]] = []
             success_count = 0
@@ -1227,41 +1517,52 @@ class MainWindow(ctk.CTk):
                 if not self.is_crawling:
                     break
 
-                company = member.get("회원사명", "")
+                company = str(member.get(COMPANY_COLUMN) or "").strip() or "미상"
+                keyword = str(member.get(KEYWORD_COLUMN) or company).strip() or company
+
                 self._schedule_progress_update(index, total, company)
-                self.log_queue.put(("INFO", f"[{index}/{total}] {company} 수집 시작"))
+                self.log_queue.put(("INFO", f"[{index}/{total}] {company} 기사 수집 시작"))
 
                 try:
-                    time.sleep(max(0.4, random.uniform(interval * 0.4, interval * 1.4)))
-                    article_count = random.randint(5, max_articles)
-                    now = datetime.now().strftime("%Y-%m-%d %H:%M")
-                    for i in range(article_count):
-                        collected_rows.append(
-                            {
-                                "회원사명": company,
-                                "기사제목": f"{company} 관련 뉴스 {i + 1}",
-                                "URL": f"https://example.com/{company}/{i}",
-                                "출처": random.choice(["Google", "Naver"]),
-                                "발행일시": now,
-                                "수집일시": now,
-                                "플랫폼": random.choice(platforms) if platforms else "기타",
-                            }
-                        )
-                    success_count += 1
-                    self.log_queue.put(("SUCCESS", f"{company}: {article_count}개 기사 수집 완료"))
-                except Exception as exc:  # pragma: no cover - 시뮬레이션 예외 처리
+                    articles = _collect_member_articles(
+                        session=session,
+                        company=company,
+                        keyword=keyword,
+                        platforms=platforms,
+                        max_articles=max_articles,
+                        timeout=timeout,
+                    )
+
+                    if articles:
+                        collected_rows.extend(articles)
+                        success_count += 1
+                        self.log_queue.put(("SUCCESS", f"{company}: {len(articles)}건 기사 수집"))
+                    else:
+                        self.log_queue.put(("WARNING", f"{company}: 수집 가능한 기사가 없습니다."))
+
+                    time.sleep(max(0.3, random.uniform(interval * 0.5, interval * 1.3)))
+                except Exception as exc:  # pragma: no cover - 방어 코드
                     fail_count += 1
                     self.log_queue.put(("ERROR", f"{company} 수집 실패: {exc}"))
+                    time.sleep(0.5)
 
             if not self.is_crawling:
                 self._schedule_stop()
                 return
 
             result_df = pd.DataFrame(collected_rows)
+            if not result_df.empty:
+                for column in RESULT_COLUMNS:
+                    if column not in result_df.columns:
+                        result_df[column] = ""
+                result_df = result_df[RESULT_COLUMNS]
+
             self._schedule_complete(result_df, success_count, fail_count)
         except Exception as exc:  # pragma: no cover - 방어 코드
-            self.log_queue.put(("ERROR", f"크롤링 중 오류가 발생했습니다: {exc}"))
+            self.log_queue.put(("ERROR", f"크롤러 실행 중 오류가 발생했습니다: {exc}"))
             self._schedule_stop()
+        finally:
+            session.close()
 
     def _schedule_progress_update(self, index: int, total: int, company: str) -> None:
         def update() -> None:

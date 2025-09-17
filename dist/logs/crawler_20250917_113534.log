@@ -1,0 +1,18 @@
+2025-09-17 11:35:37 [INFO] crawler_app - 프로그램이 시작되었습니다.
+2025-09-17 11:35:37 [INFO] crawler_app - 작업 디렉토리: D:\Crawler\Crawler\Crawler\dist
+2025-09-17 11:35:37 [INFO] crawler_app - ======================================================================
+2025-09-17 11:35:37 [INFO] crawler_app - 회원사 뉴스 수집 프로그램을 시작합니다.
+2025-09-17 11:35:37 [INFO] crawler_app - ======================================================================
+2025-09-17 11:36:34 [INFO] crawler_app - 회원사 데이터를 저장했습니다.
+2025-09-17 11:37:04 [INFO] crawler_app - 뉴스 수집을 시작합니다.
+2025-09-17 11:37:04 [INFO] crawler_app - [1/1] 클로봇 수집 시작
+2025-09-17 11:37:05 [INFO] crawler_app - 결과 저장: D:\Crawler\Crawler\Crawler\dist\results\news_20250917_113705.xlsx
+2025-09-17 11:37:05 [INFO] crawler_app - 클로봇: 6개 기사 수집 완료
+2025-09-17 11:37:05 [INFO] crawler_app - 수집 완료! 성공: 1건, 실패: 0건
+2025-09-17 11:37:09 [INFO] crawler_app - 결과 폴더 열기: D:\Crawler\Crawler\Crawler\dist\results
+2025-09-17 11:37:25 [INFO] crawler_app - 뉴스 수집을 시작합니다.
+2025-09-17 11:37:25 [INFO] crawler_app - [1/1] 클로봇 수집 시작
+2025-09-17 11:37:27 [INFO] crawler_app - 결과 저장: D:\Crawler\Crawler\Crawler\dist\results\news_20250917_113726.xlsx
+2025-09-17 11:37:27 [INFO] crawler_app - 클로봇: 13개 기사 수집 완료
+2025-09-17 11:37:27 [INFO] crawler_app - 수집 완료! 성공: 1건, 실패: 0건
+2025-09-17 11:37:41 [INFO] crawler_app - 결과 저장: C:\Users\choha\Downloads\뉴스수집결과_20250917_113734.xlsx

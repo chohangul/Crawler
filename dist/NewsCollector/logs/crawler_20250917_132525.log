@@ -1,0 +1,43 @@
+2025-09-17 13:25:26 [INFO] crawler_app - 프로그램이 시작되었습니다.
+2025-09-17 13:25:26 [INFO] crawler_app - 작업 디렉토리: D:\Crawler\Crawler\Crawler\dist\NewsCollector
+2025-09-17 13:25:26 [INFO] crawler_app - ======================================================================
+2025-09-17 13:25:26 [INFO] crawler_app - 회원사 뉴스 수집 프로그램을 시작합니다.
+2025-09-17 13:25:26 [INFO] crawler_app - ======================================================================
+2025-09-17 13:25:38 [INFO] crawler_app - 회원사 데이터를 저장했습니다.
+2025-09-17 13:25:41 [INFO] crawler_app - 뉴스 수집을 시작합니다.
+2025-09-17 13:25:41 [INFO] crawler_app - [1/1] 클로봇 기사 수집 시작
+2025-09-17 13:25:43 [INFO] crawler_app - 클로봇: 20건 기사 수집
+2025-09-17 13:25:45 [INFO] crawler_app - 결과 저장: D:\Crawler\Crawler\Crawler\dist\NewsCollector\results\news_20250917_132545.xlsx
+2025-09-17 13:25:45 [INFO] crawler_app - 수집 완료! 성공: 1건, 실패: 0건
+2025-09-17 13:26:37 [INFO] crawler_app - 회원사 데이터를 저장했습니다.
+2025-09-17 13:27:10 [INFO] crawler_app - 뉴스 수집을 시작합니다.
+2025-09-17 13:27:10 [INFO] crawler_app - [1/2] 클로봇 기사 수집 시작
+2025-09-17 13:27:10 [INFO] crawler_app - 클로봇: 20건 기사 수집
+2025-09-17 13:27:13 [INFO] crawler_app - [2/2] 레인보우로보틱스 기사 수집 시작
+2025-09-17 13:27:13 [INFO] crawler_app - 레인보우로보틱스: 20건 기사 수집
+2025-09-17 13:27:15 [INFO] crawler_app - 결과 저장: D:\Crawler\Crawler\Crawler\dist\NewsCollector\results\news_20250917_132715.xlsx
+2025-09-17 13:27:15 [INFO] crawler_app - 수집 완료! 성공: 2건, 실패: 0건
+2025-09-17 13:27:17 [INFO] crawler_app - 결과 폴더 열기: D:\Crawler\Crawler\Crawler\dist\NewsCollector\results
+2025-09-17 13:28:24 [INFO] crawler_app - 뉴스 수집을 시작합니다.
+2025-09-17 13:28:25 [INFO] crawler_app - [1/2] 클로봇 기사 수집 시작
+2025-09-17 13:28:26 [INFO] crawler_app - 클로봇: 50건 기사 수집
+2025-09-17 13:28:28 [INFO] crawler_app - [2/2] 레인보우로보틱스 기사 수집 시작
+2025-09-17 13:28:29 [INFO] crawler_app - 레인보우로보틱스: 50건 기사 수집
+2025-09-17 13:28:30 [INFO] crawler_app - 결과 저장: D:\Crawler\Crawler\Crawler\dist\NewsCollector\results\news_20250917_132830.xlsx
+2025-09-17 13:28:30 [INFO] crawler_app - 수집 완료! 성공: 2건, 실패: 0건
+2025-09-17 13:28:32 [INFO] crawler_app - 결과 폴더 열기: D:\Crawler\Crawler\Crawler\dist\NewsCollector\results
+2025-09-17 13:30:28 [INFO] crawler_app - 뉴스 수집을 시작합니다.
+2025-09-17 13:30:28 [INFO] crawler_app - [1/2] 클로봇 기사 수집 시작
+2025-09-17 13:30:30 [INFO] crawler_app - 클로봇: 50건 기사 수집
+2025-09-17 13:30:32 [INFO] crawler_app - [2/2] 레인보우로보틱스 기사 수집 시작
+2025-09-17 13:30:33 [INFO] crawler_app - 레인보우로보틱스: 50건 기사 수집
+2025-09-17 13:30:34 [INFO] crawler_app - 결과 저장: D:\Crawler\Crawler\Crawler\dist\NewsCollector\results\news_20250917_133034.xlsx
+2025-09-17 13:30:34 [INFO] crawler_app - 수집 완료! 성공: 2건, 실패: 0건
+2025-09-17 13:31:29 [INFO] crawler_app - 뉴스 수집을 시작합니다.
+2025-09-17 13:31:29 [INFO] crawler_app - [1/2] 클로봇 기사 수집 시작
+2025-09-17 13:31:29 [INFO] crawler_app - 클로봇: 50건 기사 수집
+2025-09-17 13:31:31 [INFO] crawler_app - [2/2] 레인보우로보틱스 기사 수집 시작
+2025-09-17 13:31:31 [INFO] crawler_app - 레인보우로보틱스: 50건 기사 수집
+2025-09-17 13:31:34 [INFO] crawler_app - 결과 저장: D:\Crawler\Crawler\Crawler\dist\NewsCollector\results\news_20250917_133134.xlsx
+2025-09-17 13:31:34 [INFO] crawler_app - 수집 완료! 성공: 2건, 실패: 0건
+2025-09-17 13:31:34 [INFO] crawler_app - 결과 폴더 열기: D:\Crawler\Crawler\Crawler\dist\NewsCollector\results

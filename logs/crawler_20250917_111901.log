@@ -1,0 +1,12 @@
+2025-09-17 11:19:02 [INFO] crawler_app - 프로그램이 시작되었습니다.
+2025-09-17 11:19:02 [INFO] crawler_app - 작업 디렉토리: D:\Crawler\Crawler\Crawler
+2025-09-17 11:19:02 [INFO] crawler_app - ======================================================================
+2025-09-17 11:19:02 [INFO] crawler_app - 회원사 뉴스 수집 프로그램을 시작합니다.
+2025-09-17 11:19:02 [INFO] crawler_app - ======================================================================
+2025-09-17 11:19:33 [INFO] crawler_app - 회원사 데이터를 저장했습니다.
+2025-09-17 11:19:45 [INFO] crawler_app - 뉴스 수집을 시작합니다.
+2025-09-17 11:19:45 [INFO] crawler_app - [1/1] 클로봇 수집 시작
+2025-09-17 11:19:47 [INFO] crawler_app - 결과 저장: D:\Crawler\Crawler\Crawler\results\news_20250917_111947.xlsx
+2025-09-17 11:19:47 [INFO] crawler_app - 클로봇: 8개 기사 수집 완료
+2025-09-17 11:19:47 [INFO] crawler_app - 수집 완료! 성공: 1건, 실패: 0건
+2025-09-17 11:19:50 [INFO] crawler_app - 결과 폴더 열기: D:\Crawler\Crawler\Crawler\results

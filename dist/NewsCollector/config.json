@@ -1,0 +1,15 @@
+{
+  "crawl_interval": 2,
+  "max_retries": 3,
+  "timeout": 30,
+  "max_articles_per_company": 50,
+  "platforms": [
+    "google",
+    "naver"
+  ],
+  "enable_content_crawling": true,
+  "auto_save": true,
+  "export_format": "xlsx",
+  "export_path": "D:\\Crawler\\Crawler\\Crawler\\dist\\NewsCollector\\results",
+  "last_run": "2025-09-17 13:31"
+}
